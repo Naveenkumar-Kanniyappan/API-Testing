@@ -1,149 +1,134 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let post = document.querySelector('.post');
-    let put = document.querySelector('.put');
-    let patch = document.querySelector('.patch');
-    let deleteBtn = document.querySelector('.delete');
-    let data = document.querySelector('.data');
-    let storage = document.querySelector('.storage');
-    let exit = document.querySelector('.exit');
-    let clearBtn = document.querySelector('.clear');
+    let postButton = document.querySelector('.post');
+    let putButton = document.querySelector('.put');
+    let patchButton = document.querySelector('.patch');
+    let deleteButton = document.querySelector('.delete');
+    let dataButton = document.querySelector('.data');
+    let storageContainer = document.querySelector('.storage');
+    let exitButton = document.querySelector('.exit');
+    let clearButton = document.querySelector('.clear');
+    let apiUrl = "https://mimic-server-api.vercel.app/users";
+    
+    postButton.addEventListener('click', () => openForm('POST'));
+    putButton.addEventListener('click', () => openForm('PUT'));
+    patchButton.addEventListener('click', () => openForm('PATCH'));
+    deleteButton.addEventListener('click', () => openForm('DELETE'));
+    dataButton.addEventListener('click', fetchUsers);
+    exitButton.addEventListener('click', clearStorage);
+    clearButton.addEventListener('click', clearAllUsers);
 
+    function openForm(method) {
+        let existingPopup = document.getElementById("popupForm");
+        if (existingPopup) existingPopup.remove();
 
-    post.addEventListener('click', postUser);
-    put.addEventListener('click', putUser);
-    patch.addEventListener('click', patchUser);
-    deleteBtn.addEventListener('click', deleteUser);
-    data.addEventListener('click', dataUsers);
-    exit.addEventListener('click', exitData);
-    clearBtn.addEventListener('click', clearAllUsers);
-
-    function dataUsers() {
-        let users = new XMLHttpRequest();
-        users.open("GET", "https://mimic-server-api.vercel.app/users");
-        users.onload = () => {
-            let value = JSON.parse(users.responseText);
-            storage.innerHTML = `<pre>${JSON.stringify(value, null, 2)}</pre>`;
-        };
-        showAlert("Data list show on.","success")
-        users.send();
-    }
-
-    function exitData() {
-        storage.innerHTML = "";
-    }
-
-    function postUser() {
         let popupForm = document.createElement("div");
         popupForm.id = "popupForm";
-        popupForm.style.display = 'block'; 
+        popupForm.style.display = 'flex';
+        let formFields = method !== 'POST' ? '<label for="userId">User ID:</label><input type="text" id="userId" required><br>' : '';
+        
+        if (method !== 'DELETE') {
+            formFields += `
+                <label for="userUsername">Username:</label><input type="text" id="userUsername" required><br>
+                <label for="userName">Name:</label><input type="text" id="userName" required><br>
+                <label for="userEmail">Email:</label><input type="email" id="userEmail" required><br>
+            `;
+        }
+        
         popupForm.innerHTML = `
-            <h3>Submit User Details</h3>
+            <h3>${method} User</h3>
             <form id="userForm">
-                <label for="username">Username: </label><input type="text" id="username" name="username" required><br>
-                <label for="name">Name: </label><input type="text" id="name" name="name" required><br>
-                <label for="email">Email: </label><input type="email" id="email" name="email" required><br>
-                <button type="button" id="submitBtn">Submit</button>
-                <button type="button" id="cancelBtn">Cancel</button>
+                ${formFields}
+                <button type="button" id="submitButton">Submit</button>
+                <button type="button" id="cancelButton">Cancel</button>
             </form>
         `;
         document.body.appendChild(popupForm);
 
-        document.getElementById("submitBtn").addEventListener('click', submitForm);
-        document.getElementById("cancelBtn").addEventListener('click', deleteForm);
+        document.getElementById("submitButton").addEventListener('click', () => handleForm(method));
+        document.getElementById("cancelButton").addEventListener('click', () => popupForm.remove());
     }
-    function submitForm() {
-        let username = document.getElementById("username").value;
-        let name = document.getElementById("name").value;
-        let email = document.getElementById("email").value;
-    
-        if (!username || !name || !email) {
-            showAlert("Please fill in all fields!", "error");
 
-            return;
+    function handleForm(method) {
+        let userId = document.getElementById("userId")?.value;
+        let userUsername = document.getElementById("userUsername")?.value;
+        let userName = document.getElementById("userName")?.value;
+        let userEmail = document.getElementById("userEmail")?.value;
+        let url = apiUrl;
+        let options = { method, headers: { "Content-Type": "application/json" } };
+
+        if (method !== 'DELETE') {
+            if (!userUsername || !userName || !userEmail) {
+                showAlert("Please fill in all fields!", "error");
+                return;
+            }
+            options.body = JSON.stringify({ username: userUsername, name: userName, email: userEmail });
         }
-    
-        let userData = { username, name, email };
-    
-        fetch("https://mimic-server-api.vercel.app/users", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(userData),
-        })
+        if (method !== 'POST') {
+            if (!userId) {
+                showAlert("Please provide a valid User ID!", "error");
+                return;
+            }
+            url += `/${userId}`;
+        }
+
+        fetch(url, options)
         .then(response => response.json())
-        .then(data => {
-            console.log("User Data Submitted:", data);
-            document.getElementById("userForm").reset();
-            deleteForm();
-            showAlert("User added successfully!", "success");
+        .then(() => {
+            showAlert(`${method} request successful!`, "success");
+            document.getElementById("popupForm")?.remove();
+            fetchUsers();
         })
-        .catch(error => {
-            console.error("Error:", error);
-            showAlert("Failed to add user!", "error");
+        .catch(() => showAlert(`${method} request failed!`, "error"));
+    }
+
+    function fetchUsers() {
+        fetch(apiUrl)
+        .then(response => response.json())
+        .then(users => {
+            storageContainer.innerHTML = `<table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                    <tr style="background: #77B254; color: white;">
+                                        <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Username</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Name</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Email</th>
+                                    </tr>
+                                    ${users.map(user => `
+                                        <tr style="background: #f9f9f9;">
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${user.id}</td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${user.username}</td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${user.name}</td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${user.email}</td>
+                                        </tr>`).join('')}
+                                </table>`;
+        });
+    }
+
+    function clearStorage() {
+        storageContainer.innerHTML = "";
+    }
+
+    function clearAllUsers() {
+        fetch(apiUrl)
+        .then(response => response.json())
+        .then(users => {
+            if (users.length === 0) {
+                showAlert("No users to delete.", "error");
+                return;
+            }
+            Promise.all(users.map(user => fetch(`${apiUrl}/${user.id}`, { method: "DELETE" })))
+            .then(() => {
+                showAlert("All users deleted successfully!", "success");
+                fetchUsers();
+            })
+            .catch(() => showAlert("Failed to delete all users!", "error"));
         });
     }
 
     function showAlert(message, type) {
         let alertBox = document.querySelector('.alert');
         alertBox.textContent = message;
-        alertBox.className = `alert ${type}`; 
+        alertBox.className = `alert ${type}`;
         alertBox.style.display = "block";
-    
-        setTimeout(() => {
-            alertBox.style.display = "none";
-        }, 2000); 
-    }
-    
-    
-    
-
-    function deleteForm() {
-        let popupForm = document.getElementById("popupForm");
-        if (popupForm) {
-            popupForm.remove();
-        }
-    }
-
-    function putUser() {
-        console.log('PUT request');
-    }
-
-    function patchUser() {
-        console.log('PATCH request');
-    }
-
-    function deleteUser() {
-        console.log('DELETE request');
-    }
-    function clearAllUsers() {
-        let users = new XMLHttpRequest();
-        users.open("GET", "https://mimic-server-api.vercel.app/users");
-        users.onload = () => {
-            let userList = JSON.parse(users.responseText);
-            
-            if (userList.length === 0) {
-                alert("No users to delete.");
-                return;
-            }
-
-            userList.forEach(user => {
-                fetch(`https://mimic-server-api.vercel.app/users/${user.id}`, {
-                    method: "DELETE",
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log(`Deleted user ID: ${user.id}`);
-                    storage.innerHTML = ""; 
-                })
-                .catch(error => console.error("Error deleting user:", error));
-            });
-
-            showAlert("All users deleted successfully!", "success");
-
-        };
-        users.send();
+        setTimeout(() => { alertBox.style.display = "none"; }, 2000);
     }
 });
-
-
