@@ -98,8 +98,14 @@ button:hover {
     color: black;
 }
 
-.api-container button {
-    width: 218px;
+.api-button-container{
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.api-button-container button {
+    width: 194px;
     margin: 20px 0px;
 }
 
