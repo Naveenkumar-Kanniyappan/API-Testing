@@ -125,7 +125,7 @@ function showNotification(message, type) {
     notification.style.zIndex = "1000";
     notification.style.fontSize = "14px";
     notification.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.2)";
-    notification.style.backgroundColor = type === "success" ? "#4caf50" : "#f44336";
+    notification.style.backgroundColor = "green";
     document.body.appendChild(notification);
     setTimeout(function () {
         notification.remove();
